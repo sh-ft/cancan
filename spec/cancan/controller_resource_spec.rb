@@ -20,7 +20,7 @@ describe CanCan::ControllerResource do
   end
 
   it "should not load resource into an instance variable if already set" do
-    @params.merge!(:action => "show", :id => 123)
+    @params.merge!(:action => "show", :id => "123")
     @controller.instance_variable_set(:@project, :some_project)
     resource = CanCan::ControllerResource.new(@controller)
     resource.load_resource
@@ -65,6 +65,16 @@ describe CanCan::ControllerResource do
     resource = CanCan::ControllerResource.new(@controller)
     resource.load_resource
     @controller.instance_variable_get(:@project).should == project
+  end
+
+  it "has the specified nested resource_class when using / for namespace" do
+    module Admin
+      class Dashboard; end
+    end
+    @ability.can(:index, "admin/dashboard")
+    @params.merge!(:controller => "admin/dashboard", :action => "index")
+    resource = CanCan::ControllerResource.new(@controller, :authorize => true)
+    resource.send(:resource_class).should == Admin::Dashboard
   end
 
   it "should build a new resource with hash if params[:id] is not specified" do
@@ -148,7 +158,7 @@ describe CanCan::ControllerResource do
   end
 
   it "should perform authorization using controller action and loaded model" do
-    @params.merge!(:action => "show", :id => 123)
+    @params.merge!(:action => "show", :id => "123")
     @controller.instance_variable_set(:@project, :some_project)
     stub(@controller).authorize!(:show, :some_project) { raise CanCan::AccessDenied }
     resource = CanCan::ControllerResource.new(@controller)
@@ -156,14 +166,14 @@ describe CanCan::ControllerResource do
   end
 
   it "should perform authorization using controller action and non loaded model" do
-    @params.merge!(:action => "show", :id => 123)
+    @params.merge!(:action => "show", :id => "123")
     stub(@controller).authorize!(:show, Project) { raise CanCan::AccessDenied }
     resource = CanCan::ControllerResource.new(@controller)
     lambda { resource.authorize_resource }.should raise_error(CanCan::AccessDenied)
   end
 
   it "should call load_resource and authorize_resource for load_and_authorize_resource" do
-    @params.merge!(:action => "show", :id => 123)
+    @params.merge!(:action => "show", :id => "123")
     resource = CanCan::ControllerResource.new(@controller)
     mock(resource).load_resource
     mock(resource).authorize_resource
@@ -171,7 +181,7 @@ describe CanCan::ControllerResource do
   end
 
   it "should not build a single resource when on custom collection action even with id" do
-    @params.merge!(:action => "sort", :id => 123)
+    @params.merge!(:action => "sort", :id => "123")
     resource = CanCan::ControllerResource.new(@controller, :collection => [:sort, :list])
     resource.load_resource
     @controller.instance_variable_get(:@project).should be_nil
@@ -187,7 +197,7 @@ describe CanCan::ControllerResource do
   end
 
   it "should build a resource when on custom new action even when params[:id] exists" do
-    @params.merge!(:action => "build", :id => 123)
+    @params.merge!(:action => "build", :id => "123")
     stub(Project).new { :some_project }
     resource = CanCan::ControllerResource.new(@controller, :new => :build)
     resource.load_resource
@@ -238,30 +248,30 @@ describe CanCan::ControllerResource do
   end
 
   it "should load resource through the association of another parent resource using instance variable" do
-    @params.merge!(:action => "show", :id => 123)
+    @params.merge!(:action => "show", :id => "123")
     category = Object.new
     @controller.instance_variable_set(:@category, category)
-    stub(category).projects.stub!.find(123) { :some_project }
+    stub(category).projects.stub!.find("123") { :some_project }
     resource = CanCan::ControllerResource.new(@controller, :through => :category)
     resource.load_resource
     @controller.instance_variable_get(:@project).should == :some_project
   end
 
   it "should load resource through the custom association name" do
-    @params.merge!(:action => "show", :id => 123)
+    @params.merge!(:action => "show", :id => "123")
     category = Object.new
     @controller.instance_variable_set(:@category, category)
-    stub(category).custom_projects.stub!.find(123) { :some_project }
+    stub(category).custom_projects.stub!.find("123") { :some_project }
     resource = CanCan::ControllerResource.new(@controller, :through => :category, :through_association => :custom_projects)
     resource.load_resource
     @controller.instance_variable_get(:@project).should == :some_project
   end
 
   it "should load resource through the association of another parent resource using method" do
-    @params.merge!(:action => "show", :id => 123)
+    @params.merge!(:action => "show", :id => "123")
     category = Object.new
     stub(@controller).category { category }
-    stub(category).projects.stub!.find(123) { :some_project }
+    stub(category).projects.stub!.find("123") { :some_project }
     resource = CanCan::ControllerResource.new(@controller, :through => :category)
     resource.load_resource
     @controller.instance_variable_get(:@project).should == :some_project
@@ -298,10 +308,10 @@ describe CanCan::ControllerResource do
   end
 
   it "should load through first matching if multiple are given" do
-    @params.merge!(:action => "show", :id => 123)
+    @params.merge!(:action => "show", :id => "123")
     category = Object.new
     @controller.instance_variable_set(:@category, category)
-    stub(category).projects.stub!.find(123) { :some_project }
+    stub(category).projects.stub!.find("123") { :some_project }
     resource = CanCan::ControllerResource.new(@controller, :through => [:category, :user])
     resource.load_resource
     @controller.instance_variable_get(:@project).should == :some_project
@@ -367,7 +377,7 @@ describe CanCan::ControllerResource do
   end
 
   it "should authorize based on resource name if class is false" do
-    @params.merge!(:action => "show", :id => 123)
+    @params.merge!(:action => "show", :id => "123")
     stub(@controller).authorize!(:show, :project) { raise CanCan::AccessDenied }
     resource = CanCan::ControllerResource.new(@controller, :class => false)
     lambda { resource.authorize_resource }.should raise_error(CanCan::AccessDenied)
@@ -388,6 +398,13 @@ describe CanCan::ControllerResource do
     resource = CanCan::ControllerResource.new(@controller, :id_param => :the_project)
     resource.load_resource
     @controller.instance_variable_get(:@project).should == project
+  end
+
+  # CVE-2012-5664
+  it "should always convert id param to string" do
+    @params.merge!(:action => "show", :the_project => { :malicious => "I am" })
+    resource = CanCan::ControllerResource.new(@controller, :id_param => :the_project)
+    resource.send(:id_param).class.should == String
   end
 
   it "should load resource using custom find_by attribute" do

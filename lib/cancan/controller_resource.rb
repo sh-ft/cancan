@@ -107,6 +107,8 @@ module CanCan
         if @options[:find_by]
           if resource_base.respond_to? "find_by_#{@options[:find_by]}!"
             resource_base.send("find_by_#{@options[:find_by]}!", id_param)
+          elsif resource_base.respond_to? "find_by"
+            resource_base.send("find_by", { @options[:find_by].to_sym => id_param })
           else
             resource_base.send(@options[:find_by], id_param)
           end
@@ -129,7 +131,7 @@ module CanCan
         @params[@options[:id_param]]
       else
         @params[parent? ? :"#{name}_id" : :id]
-      end
+      end.to_s
     end
 
     def member_action?
@@ -235,7 +237,7 @@ module CanCan
     end
 
     def namespace
-      @params[:controller].split("::")[0..-2]
+      @params[:controller].split(/::|\//)[0..-2]
     end
 
     def namespaced_name
